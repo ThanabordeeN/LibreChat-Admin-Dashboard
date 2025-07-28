@@ -1,0 +1,14 @@
+{
+  "name": "admin-backend",
+  "version": "1.0.0",
+  "description": "Backend for admin-dashboard",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^8.12.1",
+    "cors": "^2.8.5"
+  }
+}
