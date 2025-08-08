@@ -3,7 +3,6 @@ const express = require('express');
 const mongoose = require(path.resolve(__dirname, '..', 'api', 'node_modules', 'mongoose'));
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const cors = require('cors');
-const path = require('path');
 const { getBalanceConfig } = require('../api/server/services/Config/getCustomConfig');
 
 let createTransaction;
