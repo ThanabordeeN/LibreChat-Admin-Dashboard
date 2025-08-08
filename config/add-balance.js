@@ -80,10 +80,11 @@ const connect = require('./connect');
    */
   let result;
   try {
-    result = await addBalance({
-      userId: user._id,
-      amount,
-      createTransaction,
+    result = await createTransaction({
+      user: user._id,
+      tokenType: 'credits',
+      context: 'admin',
+      rawAmount: +amount,
     });
   } catch (error) {
     console.red('Error: ' + error.message);
