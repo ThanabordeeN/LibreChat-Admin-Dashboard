@@ -1,7 +1,4 @@
 const path = require('path');
-const mongoose = require(path.resolve(__dirname, '..', 'api', 'node_modules', 'mongoose'));
-const { v5: uuidv5 } = require('uuid');
-const { Banner } = require('@librechat/data-schemas').createModels(mongoose);
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const { askQuestion, askMultiLineQuestion, silentExit } = require('./helpers');
 const connect = require('./connect');
@@ -81,57 +78,21 @@ const connect = require('./connect');
     isPublic = isPublicInput.toLowerCase() === 'y' ? true : false;
   }
 
-  // Generate the same bannerId for the same message
-  // This allows us to display only messages that haven't been shown yet
-  const NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // Use an arbitrary namespace UUID
-  const bannerId = uuidv5(message, NAMESPACE);
-
-  let result;
   try {
-    // There is always only one Banner record in the DB.
-    // If a Banner exists in the DB, it will be updated.
-    // If it doesn't exist, a new one will be added.
-    const existingBanner = await Banner.findOne();
-    if (existingBanner) {
-      result = await Banner.findByIdAndUpdate(
-        existingBanner._id,
-        {
-          displayFrom,
-          displayTo,
-          message,
-          bannerId,
-          isPublic,
-        },
-        { new: true },
-      );
-    } else {
-      result = await Banner.create({
-        displayFrom,
-        displayTo,
-        message,
-        bannerId,
-        isPublic,
-      });
-    }
+    const { updateBanner } = require('./modules/updateBanner');
+    const result = await updateBanner({ displayFrom, displayTo, message, isPublic });
+    console.green('Banner updated successfully!');
+    console.purple(`bannerId: ${result.bannerId}`);
+    console.purple(`from: ${result.displayFrom}`);
+    console.purple(`to: ${result.displayTo || 'not specified'}`);
+    console.purple(`Banner: ${result.message}`);
+    console.purple(`isPublic: ${result.isPublic}`);
+    silentExit(0);
   } catch (error) {
     console.red('Error: ' + error.message);
     console.error(error);
     silentExit(1);
   }
-
-  if (!result) {
-    console.red('Error: Something went wrong while updating the banner!');
-    console.error(result);
-    silentExit(1);
-  }
-
-  console.green('Banner updated successfully!');
-  console.purple(`bannerId: ${bannerId}`);
-  console.purple(`from: ${displayFrom}`);
-  console.purple(`to: ${displayTo || 'not specified'}`);
-  console.purple(`Banner: ${message}`);
-  console.purple(`isPublic: ${isPublic}`);
-  silentExit(0);
 })();
 
 process.on('uncaughtException', (err) => {
