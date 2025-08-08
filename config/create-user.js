@@ -1,8 +1,5 @@
 const path = require('path');
-const mongoose = require(path.resolve(__dirname, '..', 'api', 'node_modules', 'mongoose'));
-const { User } = require('@librechat/data-schemas').createModels(mongoose);
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
-const { registerUser } = require('~/server/services/AuthService');
 const { askQuestion, silentExit } = require('./helpers');
 const connect = require('./connect');
 
@@ -93,31 +90,15 @@ or the user will need to attempt logging in to have a verification link sent to 
     }
   }
 
-  const userExists = await User.findOne({ $or: [{ email }, { username }] });
-  if (userExists) {
-    console.red('Error: A user with that email or username already exists!');
-    silentExit(1);
-  }
-
-  const user = { email, password, name, username, confirm_password: password };
-  let result;
   try {
-    result = await registerUser(user, { emailVerified });
-  } catch (error) {
-    console.red('Error: ' + error.message);
-    silentExit(1);
-  }
-
-  if (result.status !== 200) {
-    console.red('Error: ' + result.message);
-    silentExit(1);
-  }
-
-  const userCreated = await User.findOne({ $or: [{ email }, { username }] });
-  if (userCreated) {
+    const { createUser } = require('./modules/createUser');
+    const userCreated = await createUser({ email, password, name, username, emailVerified });
     console.green('User created successfully!');
     console.green(`Email verified: ${userCreated.emailVerified}`);
     silentExit(0);
+  } catch (error) {
+    console.red('Error: ' + error.message);
+    silentExit(1);
   }
 })();
 
