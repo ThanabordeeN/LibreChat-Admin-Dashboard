@@ -5,6 +5,7 @@ require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const { askQuestion, silentExit } = require('./helpers');
 const { isEnabled } = require('~/server/utils/handleText');
 const { createTransaction } = require('~/models/Transaction');
+const { addBalance } = require('./balanceUtils');
 const connect = require('./connect');
 
 (async () => {
