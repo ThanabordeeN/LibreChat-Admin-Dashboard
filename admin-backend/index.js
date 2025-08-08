@@ -1,5 +1,7 @@
+const path = require('path');
 const express = require('express');
-const mongoose = require('mongoose');
+const mongoose = require(path.resolve(__dirname, '..', 'api', 'node_modules', 'mongoose'));
+require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const cors = require('cors');
 const path = require('path');
 const { getBalanceConfig } = require('../api/server/services/Config/getCustomConfig');
@@ -17,6 +19,7 @@ const {
   Balance,
   Banner,
 } = require('@librechat/data-schemas').createModels(mongoose);
+const { listBalances, setBalance } = require('../config/balanceUtils');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -423,6 +426,53 @@ app.post('/api/system/prepare-update', (req, res) => {
   console.log('System: Prepare Update requested.');
   res.status(200).json({ message: 'Prepare update command sent (placeholder).' });
 });
+
+// Admin Routes
+const authenticate = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (token === 'dummy-admin-token') {
+    return next();
+  }
+  return res.status(401).json({ message: 'Unauthorized' });
+};
+
+const adminRouter = express.Router();
+adminRouter.use(authenticate);
+
+adminRouter.post('/create-user', async (req, res) => {
+  const { email, password, name, username, emailVerified } = req.body;
+  try {
+    const user = await createUser({ email, password, name, username, emailVerified });
+    res.status(200).json({ message: 'User created', user });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(400).json({ message: error.message });
+  }
+});
+
+adminRouter.post('/ban-user', async (req, res) => {
+  const { email, duration } = req.body;
+  try {
+    await banUser(email, duration, req, res);
+    res.status(200).json({ message: `User ${email} has been banned.` });
+  } catch (error) {
+    console.error('Error banning user:', error);
+    res.status(400).json({ message: error.message });
+  }
+});
+
+adminRouter.post('/update-banner', async (req, res) => {
+  const { displayFrom, displayTo, message, isPublic } = req.body;
+  try {
+    const banner = await updateBannerModule({ displayFrom, displayTo, message, isPublic });
+    res.status(200).json(banner);
+  } catch (error) {
+    console.error('Error updating banner:', error);
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.use('/api/admin', adminRouter);
 
 // Auth Service
 app.post('/api/auth/login', async (req, res) => {
