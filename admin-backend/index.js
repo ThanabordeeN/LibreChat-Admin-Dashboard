@@ -6,6 +6,7 @@ const {
   Balance,
   Banner,
 } = require('@librechat/data-schemas').createModels(mongoose);
+const { listBalances, setBalance } = require('../config/balanceUtils');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -17,29 +18,6 @@ app.use(cors());
 mongoose.connect(MONGO_URI)
   .then(() => console.log('Admin Backend Connected to MongoDB'))
   .catch(err => console.error('Admin Backend MongoDB connection error:', err));
-
-// Helper function to get all balances
-async function getAllBalances() {
-  const users = await User.find({});
-  const balances = [];
-  for (const user of users) {
-    const balance = await Balance.findOne({ user: user._id });
-    if (balance) {
-      balances.push({
-        id: user._id,
-        email: user.email,
-        balance: balance.tokenCredits,
-      });
-    } else {
-      balances.push({
-        id: user._id,
-        email: user.email,
-        balance: 0, // Default to 0 if no balance found
-      });
-    }
-  }
-  return balances;
-}
 
 // Helper function to get user statistics
 async function getUserStats() {
@@ -93,7 +71,7 @@ const Invite = mongoose.models.Invite || mongoose.model('Invite', InviteSchema);
 // API endpoint for balances
 app.get('/api/balances', async (req, res) => {
   try {
-    const balances = await getAllBalances();
+    const balances = await listBalances({ User, Balance });
     res.json(balances);
   } catch (error) {
     console.error('Error fetching balances:', error);
@@ -129,11 +107,7 @@ app.put('/api/balances/:id', async (req, res) => {
     if (typeof tokenCredits !== 'number') {
       return res.status(400).json({ message: 'tokenCredits must be a number' });
     }
-    const updatedBalance = await Balance.findOneAndUpdate(
-      { user: id },
-      { tokenCredits },
-      { upsert: true, new: true }
-    );
+    const updatedBalance = await setBalance({ userId: id, amount: tokenCredits, Balance });
     res.json(updatedBalance);
   } catch (error) {
     console.error('Error updating balance:', error);

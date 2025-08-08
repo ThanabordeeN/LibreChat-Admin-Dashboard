@@ -4,6 +4,7 @@ const { User, Balance } = require('@librechat/data-schemas').createModels(mongoo
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const { askQuestion, silentExit } = require('./helpers');
 const { isEnabled } = require('~/server/utils/handleText');
+const { setBalance } = require('./balanceUtils');
 const connect = require('./connect');
 
 (async () => {
@@ -86,11 +87,7 @@ const connect = require('./connect');
    */
   let result;
   try {
-    result = await Balance.findOneAndUpdate(
-      { user: user._id },
-      { tokenCredits: amount },
-      { upsert: true, new: true },
-    ).lean();
+    result = await setBalance({ userId: user._id, amount, Balance });
   } catch (error) {
     console.red('Error: ' + error.message);
     console.error(error);

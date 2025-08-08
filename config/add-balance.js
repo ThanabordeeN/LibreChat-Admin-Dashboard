@@ -5,6 +5,7 @@ require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const { askQuestion, silentExit } = require('./helpers');
 const { isEnabled } = require('~/server/utils/handleText');
 const { createTransaction } = require('~/models/Transaction');
+const { addBalance } = require('./balanceUtils');
 const connect = require('./connect');
 
 (async () => {
@@ -79,11 +80,10 @@ const connect = require('./connect');
    */
   let result;
   try {
-    result = await createTransaction({
-      user: user._id,
-      tokenType: 'credits',
-      context: 'admin',
-      rawAmount: +amount,
+    result = await addBalance({
+      userId: user._id,
+      amount,
+      createTransaction,
     });
   } catch (error) {
     console.red('Error: ' + error.message);
