@@ -3,6 +3,17 @@ const express = require('express');
 const mongoose = require(path.resolve(__dirname, '..', 'api', 'node_modules', 'mongoose'));
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const cors = require('cors');
+const path = require('path');
+const { getBalanceConfig } = require('../api/server/services/Config/getCustomConfig');
+
+let createTransaction;
+try {
+  require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
+  ({ createTransaction } = require('../api/models/Transaction'));
+} catch (e) {
+  console.warn('createTransaction not available:', e.message);
+}
+
 const {
   User,
   Balance,
@@ -20,6 +31,25 @@ app.use(cors());
 mongoose.connect(MONGO_URI)
   .then(() => console.log('Admin Backend Connected to MongoDB'))
   .catch(err => console.error('Admin Backend MongoDB connection error:', err));
+
+// Helper function to get all balances
+async function getAllBalances(startBalance = 0) {
+  const users = await User.find({});
+  const balances = [];
+  for (const user of users) {
+    let balance = await Balance.findOne({ user: user._id });
+    if (!balance) {
+      balance = new Balance({ user: user._id, tokenCredits: startBalance });
+      await balance.save();
+    }
+    balances.push({
+      id: user._id,
+      email: user.email,
+      balance: balance.tokenCredits,
+    });
+  }
+  return balances;
+}
 
 // Helper function to get user statistics
 async function getUserStats() {
@@ -73,7 +103,11 @@ const Invite = mongoose.models.Invite || mongoose.model('Invite', InviteSchema);
 // API endpoint for balances
 app.get('/api/balances', async (req, res) => {
   try {
-    const balances = await listBalances({ User, Balance });
+    const balanceConfig = await getBalanceConfig();
+    if (!balanceConfig?.enabled) {
+      return res.status(403).json({ message: 'Balance feature disabled' });
+    }
+    const balances = await getAllBalances(balanceConfig.startBalance ?? 0);
     res.json(balances);
   } catch (error) {
     console.error('Error fetching balances:', error);
@@ -104,12 +138,38 @@ app.get('/api/translations', async (req, res) => {
 });
 app.put('/api/balances/:id', async (req, res) => {
   try {
+    const balanceConfig = await getBalanceConfig();
+    if (!balanceConfig?.enabled) {
+      return res.status(403).json({ message: 'Balance feature disabled' });
+    }
     const { id } = req.params;
-    const { tokenCredits } = req.body;
-    if (typeof tokenCredits !== 'number') {
+    const tokenCredits = Number(req.body.tokenCredits);
+    if (!Number.isFinite(tokenCredits)) {
       return res.status(400).json({ message: 'tokenCredits must be a number' });
     }
-    const updatedBalance = await setBalance({ userId: id, amount: tokenCredits, Balance });
+    let updatedBalance;
+    if (createTransaction) {
+      let existingBalance = await Balance.findOne({ user: id });
+      if (!existingBalance && balanceConfig.startBalance != null) {
+        existingBalance = new Balance({ user: id, tokenCredits: balanceConfig.startBalance });
+        await existingBalance.save();
+      }
+      const currentCredits = existingBalance ? existingBalance.tokenCredits : 0;
+      const delta = tokenCredits - currentCredits;
+      await createTransaction({
+        user: id,
+        tokenType: 'credits',
+        context: 'admin',
+        rawAmount: delta,
+      });
+      updatedBalance = await Balance.findOne({ user: id });
+    } else {
+      updatedBalance = await Balance.findOneAndUpdate(
+        { user: id },
+        { tokenCredits },
+        { upsert: true, new: true },
+      );
+    }
     res.json(updatedBalance);
   } catch (error) {
     console.error('Error updating balance:', error);
