@@ -50,20 +50,35 @@ const logout = () => {
 };
 
 const items = ref([
-  { 
-    label: 'Users', 
-    icon: 'pi pi-fw pi-users', 
-    command: () => router.push('/') 
+  {
+    label: 'Users',
+    icon: 'pi pi-fw pi-users',
+    command: () => router.push('/')
   },
-  { 
-    label: 'Balance', 
-    icon: 'pi pi-fw pi-dollar', 
-    command: () => router.push('/balance') 
+  {
+    label: 'Balance',
+    icon: 'pi pi-fw pi-dollar',
+    command: () => router.push('/balance')
   },
-  { 
-    label: 'Banners', 
-    icon: 'pi pi-fw pi-megaphone', 
-    command: () => router.push('/banners') 
+  {
+    label: 'Banners',
+    icon: 'pi pi-fw pi-megaphone',
+    command: () => router.push('/banners')
+  },
+  {
+    label: 'Create User',
+    icon: 'pi pi-fw pi-user-plus',
+    command: () => router.push('/create-user')
+  },
+  {
+    label: 'Ban User',
+    icon: 'pi pi-fw pi-user-minus',
+    command: () => router.push('/ban-user')
+  },
+  {
+    label: 'Update Banner',
+    icon: 'pi pi-fw pi-megaphone',
+    command: () => router.push('/update-banner')
   }
 ]);
 </script>

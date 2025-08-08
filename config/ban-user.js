@@ -1,10 +1,6 @@
 const path = require('path');
-const mongoose = require(path.resolve(__dirname, '..', 'api', 'node_modules', 'mongoose'));
-const { User } = require('@librechat/data-schemas').createModels(mongoose);
-const { ViolationTypes } = require('librechat-data-provider');
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const { askQuestion, silentExit } = require('./helpers');
-const banViolation = require('~/cache/banViolation');
 const connect = require('./connect');
 
 (async () => {
@@ -46,36 +42,15 @@ const connect = require('./connect');
     silentExit(1);
   }
 
-  const user = await User.findOne({ email }).lean();
-  if (!user) {
-    console.red('Error: No user with that email was found!');
+  try {
+    const { banUser } = require('./modules/banUser');
+    await banUser(email, duration);
+    console.green('User banned successfully!');
+    silentExit(0);
+  } catch (error) {
+    console.red('Error: ' + error.message);
     silentExit(1);
-  } else {
-    console.purple(`Found user: ${user.email}`);
   }
-
-  const req = {};
-  const res = {
-    clearCookie: () => {},
-    status: function () {
-      return this;
-    },
-    json: function () {
-      return this;
-    },
-  };
-
-  const errorMessage = {
-    type: ViolationTypes.CONCURRENT,
-    violation_count: 20,
-    user_id: user._id,
-    prev_count: 0,
-    duration: duration,
-  };
-
-  await banViolation(req, res, errorMessage);
-
-  silentExit(0);
 })();
 
 process.on('uncaughtException', (err) => {
