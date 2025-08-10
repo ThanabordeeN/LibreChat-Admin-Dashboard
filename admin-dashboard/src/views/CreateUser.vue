@@ -34,14 +34,15 @@ import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import Checkbox from 'primevue/checkbox';
 import Button from 'primevue/button';
-import { adminService } from '../services/adminService';
+// Replaced deprecated adminService with userService
+import { userService } from '../services/userService';
 
 const toast = useToast();
 const form = reactive({ email: '', name: '', username: '', password: '', emailVerified: true });
 
 const submit = async () => {
   try {
-    await adminService.createUser(form);
+  await userService.createUser(form as any);
     toast.add({ severity: 'success', summary: 'Success', detail: 'User created', life: 3000 });
     form.email = form.name = form.username = form.password = '';
     form.emailVerified = true;

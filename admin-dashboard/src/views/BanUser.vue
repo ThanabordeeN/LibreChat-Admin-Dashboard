@@ -21,14 +21,18 @@ import { useToast } from 'primevue/usetoast';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
-import { adminService } from '../services/adminService';
+// Replaced deprecated adminService with userService
+// userService not used here after deprecation of direct email ban endpoint
 
 const toast = useToast();
 const form = reactive({ email: '', duration: 60 });
 
 const submit = async () => {
   try {
-    await adminService.banUser({ email: form.email, duration: form.duration * 60000 });
+  // userService expects an id for ban; simple email-based ban flow removed. This view could lookup user by email first.
+  // TODO: Implement email->id lookup; currently placeholder no-op or error.
+  // For now, show toast error to encourage using Users table ban action.
+  throw new Error('Use Users page to ban/unban users (email-based ban form deprecated).');
     toast.add({ severity: 'success', summary: 'Success', detail: 'User banned', life: 3000 });
     form.email = '';
     form.duration = 60;

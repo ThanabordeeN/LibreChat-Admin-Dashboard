@@ -30,16 +30,17 @@ import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import Checkbox from 'primevue/checkbox';
 import Button from 'primevue/button';
-import { adminService } from '../services/adminService';
+// Replaced deprecated adminService with bannerService
+import { bannerService } from '../services/bannerService';
 
 const toast = useToast();
 const form = reactive({ displayFrom: '', displayTo: '', message: '', isPublic: false });
 
 const submit = async () => {
   try {
-    await adminService.updateBanner({
-      displayFrom: form.displayFrom || null,
-      displayTo: form.displayTo || null,
+    await bannerService.upsertBanner({
+      displayFrom: form.displayFrom || undefined,
+      displayTo: form.displayTo || undefined,
       message: form.message,
       isPublic: form.isPublic,
     });
