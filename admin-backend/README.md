@@ -1,4 +1,4 @@
-# dmin Backend
+# Admin Backend
 
 A lightweight Express + MongoDB service providing administrative endpoints (users, balances, banners, invites, translations) for the LibreChat Admin Dashboard. It wraps logic that previously lived in maintenance scripts and exposes a clean HTTP API.
 
@@ -33,6 +33,28 @@ npm start
 ```
 
 Server listens on `ADMIN_BACKEND_PORT` (or `ADMIN_PORT` fallback, default 3001).
+
+### Run Modes (Summary)
+➡ Full detailed guide: see `../ADMIN_RUN_MODES.md`.
+
+| Mode | Command | Notes |
+|------|---------|-------|
+| Local Node | `npm start` | Uses root `.env` (or local `.env`) |
+| Docker (image) | `docker build -t admin-backend ./admin-backend && docker run --env-file .env -p 3001:3001 admin-backend` | Standalone container |
+| Compose (admin only) | `docker compose up -d admin-backend mongodb` | Uses override file |
+| Compose (full stack) | `docker compose up -d` | Starts main app + admin services |
+
+Health check after start (PowerShell):
+```
+Invoke-RestMethod -Headers @{ 'x-admin-key'=$env:ADMIN_API_KEY } http://localhost:3001/api/admin/health
+```
+
+### Environment File Resolution
+Load order when starting the backend:
+1. Root `.env` (project root)
+2. `admin-backend/.env` (only read if root not found or you intentionally remove it)
+
+Recommended: Keep a single source of truth in the root `.env` when using Docker Compose. Create a local `admin-backend/.env` only for experiments (e.g. alternate Mongo instance).
 
 ## Environment Variables
 
@@ -127,6 +149,7 @@ Invoke-RestMethod -Method POST -Headers @{ 'x-admin-key'='dev-key'; 'Content-Typ
 - Use a separate Mongo database or collection prefix for admin testing.
 - Keep `ADMIN_API_KEY` unset locally if you want to skip auth while iterating (warning logs once).
 - Change port with `ADMIN_BACKEND_PORT` to avoid conflicts.
+- Frontend standalone dev: ensure `admin-dashboard/.env` contains `VITE_ADMIN_API_BASE` & `VITE_ADMIN_API_KEY`; under Docker these come from root `.env` + compose overrides.
 
 ## Roadmap / Ideas
 
