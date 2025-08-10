@@ -1,201 +1,146 @@
 <template>
-  <div class="banners-view">
-    <div class="page-header">
-      <h1 class="text-3xl font-bold text-gray-800">Banner Management</h1>
-      <Button
-        label="New Banner"
-        icon="pi pi-plus"
-        class="p-button-primary"
-        @click="openNew"
-      />
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-semibold tracking-tight">Banner Management</h1>
+  <UiButton size="sm" @click="openNew">{{ banner.bannerId ? 'Edit Banner' : 'New Banner' }}</UiButton>
     </div>
 
-    <div class="card">
-      <DataTable
-        :value="banners"
-        :loading="loading"
-        dataKey="bannerId"
-        :paginator="true"
-        :rows="10"
-        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        :rowsPerPageOptions="[5, 10, 25]"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} banners"
-        responsiveLayout="scroll"
-      >
-        <Column field="message" header="Message" :sortable="true" style="min-width: 20rem">
-          <template #body="slotProps">
-            <p class="truncate">{{ slotProps.data.message }}</p>
-          </template>
-        </Column>
-        <Column field="duration" header="Duration (minutes)" :sortable="true" style="min-width: 12rem"></Column>
-        <Column :exportable="false" header="Actions" style="min-width: 10rem">
-          <template #body="slotProps">
-            <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editBanner(slotProps.data)" v-tooltip.top="'Edit'" />
-            <Button icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteBanner()" v-tooltip.top="'Delete'"/>
-          </template>
-        </Column>
-      </DataTable>
+    <div class="rounded-lg border bg-white shadow-sm p-6" v-if="loading">Loading banner...</div>
+    <div v-else class="rounded-lg border bg-white shadow-sm">
+      <div v-if="bannerData" class="p-6 space-y-4">
+        <div class="flex items-start justify-between gap-4">
+          <div class="space-y-2 w-full">
+            <p class="text-sm text-slate-500">Active Banner</p>
+            <p class="text-base font-medium leading-relaxed whitespace-pre-wrap">{{ bannerData.message }}</p>
+            <p class="text-xs text-slate-500" v-if="bannerData.displayFrom">From: {{ formatDate(bannerData.displayFrom) }} <span v-if="bannerData.displayTo">→ {{ formatDate(bannerData.displayTo) }}</span></p>
+            <p class="text-xs text-amber-600" v-if="durationMinutes">Duration: {{ durationMinutes }} min</p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <UiButton size="sm" variant="outline" @click="openNew">Edit</UiButton>
+            <UiButton size="sm" variant="destructive" @click="askDelete">Delete</UiButton>
+          </div>
+        </div>
+      </div>
+      <div v-else class="p-6 text-sm text-slate-500">No banner set.</div>
     </div>
 
-    <Dialog
-      v-model:visible="bannerDialog"
-      :style="{ width: '450px' }"
-      :header="banner.bannerId ? 'Edit Banner' : 'Create New Banner'"
-      :modal="true"
-      class="p-fluid"
-    >
-      <div class="field">
-        <label for="message">Message</label>
-        <Textarea
-          id="message"
-          v-model="banner.message"
-          required="true"
-          :autoResize="true"
-          rows="4"
-          :class="{ 'p-invalid': submitted && !banner.message }"
-        />
-        <small class="p-error" v-if="submitted && !banner.message">Message is required.</small>
-      </div>
-      <div class="field">
-        <label for="duration">Duration (in minutes)</label>
-        <InputNumber
-          id="duration"
-          v-model="banner.duration"
-          integeronly
-          :min="1"
-          required="true"
-          :class="{ 'p-invalid': submitted && (!banner.duration || banner.duration <= 0) }"
-        />
-        <small class="p-error" v-if="submitted && (!banner.duration || banner.duration <= 0)">A valid duration is required.</small>
-      </div>
+  <UiDialog :open="bannerDialog" :title="banner.bannerId ? 'Edit Banner' : 'Create Banner'" @close="hideDialog">
+      <form class="space-y-4" @submit.prevent="saveBanner">
+        <div class="space-y-2">
+          <UiLabel for="message">Message</UiLabel>
+          <textarea id="message" v-model="banner.message" rows="4" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+          <p class="text-xs text-red-500" v-if="submitted && !banner.message">Message required</p>
+        </div>
+        <div class="space-y-2">
+          <UiLabel for="duration">Duration (minutes)</UiLabel>
+          <UiInput id="duration" type="number" min="1" v-model.number="(banner.duration as number)" />
+          <p class="text-xs text-red-500" v-if="submitted && (!banner.duration || banner.duration <=0)">Valid duration required</p>
+        </div>
+      </form>
       <template #footer>
-        <Button label="Cancel" icon="pi pi-times" class="p-button-text" @click="hideDialog"/>
-        <Button label="Save" icon="pi pi-check" class="p-button-primary" @click="saveBanner" />
+        <UiButton variant="outline" @click="hideDialog">Cancel</UiButton>
+  <UiButton @click="saveBanner" :disabled="!banner.message || !banner.duration || banner.duration<=0">Save</UiButton>
       </template>
-    </Dialog>
+    </UiDialog>
+
+    <UiDialog :open="deleteDialog" title="Delete Banner" @close="deleteDialog=false">
+      <p class="text-sm mb-4">Delete current banner?</p>
+      <template #footer>
+        <UiButton variant="outline" @click="deleteDialog=false">Cancel</UiButton>
+        <UiButton variant="destructive" @click="confirmDelete">Delete</UiButton>
+      </template>
+    </UiDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useToast } from 'primevue/usetoast';
-import { useConfirm } from 'primevue/useconfirm';
+import { ref, onMounted, computed } from 'vue';
 import { bannerService, type Banner as ApiBanner } from '../services/bannerService';
-import InputNumber from 'primevue/inputnumber';
-import Textarea from 'primevue/textarea';
+import UiButton from '../components/ui/button.vue';
+import UiDialog from '../components/ui/dialog.vue';
+import UiInput from '../components/ui/input.vue';
+import UiLabel from '../components/ui/label.vue';
+import { useToast } from '../stores/toast';
 
-const toast = useToast();
-const confirm = useConfirm();
-
-interface UiBanner extends ApiBanner { duration?: number }
-const banners = ref<UiBanner[]>([]); // Will hold at most one banner
-const bannerDialog = ref(false);
-const banner = ref<UiBanner>({ message: '', duration: 0 });
-const submitted = ref(false);
+const { push } = useToast();
 const loading = ref(false);
+const bannerData = ref<ApiBanner | null>(null);
+const banner = ref<{ bannerId?: string; message: string; duration?: number }>({ message: '', duration: 60 });
+const bannerDialog = ref(false);
+const submitted = ref(false);
+const deleteDialog = ref(false);
 
-const fetchBanners = async () => {
+async function load() {
   loading.value = true;
   try {
     const b = await bannerService.getBanner();
     if (b) {
-      const from = (b as any).displayFrom ? new Date((b as any).displayFrom).getTime() : Date.now();
-      const to = (b as any).displayTo ? new Date((b as any).displayTo).getTime() : null;
+      const from = b.displayFrom ? new Date(b.displayFrom).getTime() : Date.now();
+      const to = b.displayTo ? new Date(b.displayTo).getTime() : null;
       const duration = to ? Math.round((to - from) / 60000) : 0;
-      banners.value = [{ ...b, duration }];
+      bannerData.value = b;
+      banner.value = { bannerId: (b as any).bannerId, message: b.message, duration: duration || 60 };
     } else {
-      banners.value = [];
+      bannerData.value = null;
     }
-  } catch (error) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to fetch banners', life: 3000 });
+  } catch (e) {
+    push({ variant: 'error', title: 'Error', description: 'Failed to fetch banner' });
   } finally {
     loading.value = false;
   }
-};
+}
+onMounted(load);
 
-onMounted(fetchBanners);
-
-const openNew = () => {
-  banner.value = { message: '', duration: 60 }; // Default to 60 mins
+function openNew() {
   submitted.value = false;
-  bannerDialog.value = true;
-};
-
-const hideDialog = () => {
-  bannerDialog.value = false;
-  submitted.value = false;
-};
-
-const saveBanner = async () => {
-  submitted.value = true;
-  if (banner.value.message.trim() && (banner.value.duration || 0) > 0) {
-    try {
-      // Map duration minutes into displayFrom/displayTo for backend
-      const now = new Date();
-      const payload: ApiBanner = {
-        message: banner.value.message,
-        displayFrom: now.toISOString(),
-        displayTo: banner.value.duration ? new Date(now.getTime() + (banner.value.duration || 0) * 60000).toISOString() : undefined,
-      } as any;
-      await bannerService.upsertBanner(payload);
-      toast.add({ severity: 'success', summary: 'Successful', detail: 'Banner Saved', life: 3000 });
-      bannerDialog.value = false;
-      fetchBanners();
-    } catch (error: any) {
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save banner', life: 3000 });
-    }
+  if (!bannerData.value) {
+    banner.value = { message: '', duration: 60 };
   }
-};
-
-const editBanner = (editBannerData: UiBanner) => {
-  // Recompute duration if timestamps exist
-  const displayFrom = (editBannerData as any).displayFrom ? new Date((editBannerData as any).displayFrom).getTime() : Date.now();
-  const displayTo = (editBannerData as any).displayTo ? new Date((editBannerData as any).displayTo).getTime() : null;
-  const duration = displayTo ? Math.round((displayTo - displayFrom) / 60000) : 0;
-  banner.value = { ...editBannerData, duration };
   bannerDialog.value = true;
-};
+}
+function hideDialog() { bannerDialog.value = false; }
 
-const confirmDeleteBanner = () => {
-  confirm.require({
-    message: 'Are you sure you want to delete this banner?',
-    header: 'Confirm Deletion',
-    icon: 'pi pi-exclamation-triangle',
-    acceptClass: 'p-button-danger',
-    accept: async () => {
-      try {
-  await bannerService.deleteBanner();
-        toast.add({ severity: 'success', summary: 'Successful', detail: 'Banner Deleted', life: 3000 });
-        fetchBanners();
-      } catch (error: any) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete banner', life: 3000 });
-      }
-    },
-  });
-};
+async function saveBanner() {
+  submitted.value = true;
+  if (!banner.value.message || !banner.value.duration || banner.value.duration <= 0) return;
+  const now = new Date();
+  const payload: ApiBanner = {
+    message: banner.value.message,
+    displayFrom: now.toISOString(),
+    displayTo: new Date(now.getTime() + (banner.value.duration || 0) * 60000).toISOString(),
+  } as any;
+  try {
+    await bannerService.upsertBanner(payload);
+    push({ variant: 'success', title: 'Saved', description: 'Banner saved' });
+    bannerDialog.value = false;
+    load();
+  } catch (e) {
+    push({ variant: 'error', title: 'Error', description: 'Save failed' });
+  }
+}
+
+function askDelete() { deleteDialog.value = true; }
+async function confirmDelete() {
+  try {
+    await bannerService.deleteBanner();
+    push({ variant: 'success', title: 'Deleted', description: 'Banner removed' });
+    deleteDialog.value = false;
+    load();
+  } catch (e) {
+    push({ variant: 'error', title: 'Error', description: 'Delete failed' });
+  }
+}
+
+const durationMinutes = computed(() => {
+  if (!bannerData.value?.displayFrom || !bannerData.value?.displayTo) return null;
+  const from = new Date(bannerData.value.displayFrom).getTime();
+  const to = new Date(bannerData.value.displayTo).getTime();
+  return Math.round((to - from) / 60000);
+});
+function formatDate(d: any) { return new Date(d).toLocaleString(); }
+
+// silence unused warnings
+void durationMinutes;
 </script>
 
-<style scoped>
-.banners-view {
-  padding: 1rem;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.p-button-primary {
-    background: #4f46e5;
-    border: 1px solid #4f46e5;
-}
-
-.truncate {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 40ch;
-}
-</style>
+<style scoped></style>
