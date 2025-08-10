@@ -1,6 +1,6 @@
-import axios from 'axios';
+import api from './api';
 
-const API_URL = '/stats';
+const API_URL = '/admin/user-stats';
 
 export interface Stats {
   totalUsers: number;
@@ -12,7 +12,7 @@ export interface Stats {
 }
 
 export const getStats = async (): Promise<Stats> => {
-  const response = await axios.get(API_URL);
+  const response = await api.get(API_URL);
   return response.data;
 };
 

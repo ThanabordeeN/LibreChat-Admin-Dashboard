@@ -1,4 +1,4 @@
-import api from './api'; // Import the configured axios instance
+import api from './api'; // Configured axios instance
 
 export interface Balance {
   id?: string;
@@ -8,16 +8,21 @@ export interface Balance {
 
 
 const getBalances = async (): Promise<Balance[]> => {
-  const response = await api.get<Balance[]>('/balances');
+  const response = await api.get<Balance[]>('/admin/balances');
   console.log('Fetched balances:', response.data);
   return response.data;
 };
-
-const updateBalance = async (id: string, balance: number): Promise<void> => {
-  await api.put(`/balances/${id}`, { tokenCredits: balance });
+// Add relative amount (can be negative except zero) -> backend validates
+const addBalance = async (id: string, amount: number): Promise<void> => {
+  await api.post(`/admin/balances/${id}/add`, { amount });
+};
+// Set absolute amount (non-negative)
+const setBalance = async (id: string, amount: number): Promise<void> => {
+  await api.post(`/admin/balances/${id}/set`, { amount });
 };
 
 export const balanceService = {
   getBalances,
-  updateBalance,
+  addBalance,
+  setBalance,
 };

@@ -1,34 +1,35 @@
-import api from './api'; // Adjust the import path as necessary
+import api from './api';
 
-const API_URL = '/banners';
-
+// Backend treats banner as singleton: POST /admin/banner (create or update), GET /admin/banner, DELETE /admin/banner
 export interface Banner {
-  bannerId?: string; // Maps to the user ID being banned
-  message: string; // The reason for the ban
-  duration: number; // (in minutes)
+  bannerId?: string;
+  message: string;
+  displayFrom?: string | Date | null;
+  displayTo?: string | Date | null;
+  isPublic?: boolean;
 }
 
-const getBanners = async (): Promise<Banner[]> => {
-  const response = await api.get<Banner[]>(API_URL);
+const getBanner = async (): Promise<Banner | null> => {
+  try {
+    const response = await api.get<Banner>('/admin/banner');
+    return response.data;
+  } catch (e: any) {
+    if (e.response?.status === 404) return null;
+    throw e;
+  }
+};
+
+const upsertBanner = async (banner: Banner): Promise<Banner> => {
+  const response = await api.post<Banner>('/admin/banner', banner);
   return response.data;
 };
 
-const createBanner = async (banner: Banner): Promise<Banner> => {
-  const response = await api.post<Banner>(API_URL, banner);
-  return response.data;
-};
-
-const updateBanner = async (id: string, banner: Banner): Promise<void> => {
-  await api.put(`${API_URL}/${id}`, banner);
-};
-
-const deleteBanner = async (id: string): Promise<void> => {
-  await api.delete(`${API_URL}/${id}`);
+const deleteBanner = async (): Promise<void> => {
+  await api.delete('/admin/banner');
 };
 
 export const bannerService = {
-  getBanners,
-  createBanner,
-  updateBanner,
+  getBanner,
+  upsertBanner,
   deleteBanner,
 };

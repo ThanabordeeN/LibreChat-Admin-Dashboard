@@ -31,7 +31,7 @@
         <Column :exportable="false" header="Actions" style="min-width: 10rem">
           <template #body="slotProps">
             <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editBanner(slotProps.data)" v-tooltip.top="'Edit'" />
-            <Button icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteBanner(slotProps.data)" v-tooltip.top="'Delete'"/>
+            <Button icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteBanner()" v-tooltip.top="'Delete'"/>
           </template>
         </Column>
       </DataTable>
@@ -80,23 +80,32 @@
 import { ref, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
-import { bannerService, type Banner } from '../services/bannerService';
+import { bannerService, type Banner as ApiBanner } from '../services/bannerService';
 import InputNumber from 'primevue/inputnumber';
 import Textarea from 'primevue/textarea';
 
 const toast = useToast();
 const confirm = useConfirm();
 
-const banners = ref<Banner[]>([]);
+interface UiBanner extends ApiBanner { duration?: number }
+const banners = ref<UiBanner[]>([]); // Will hold at most one banner
 const bannerDialog = ref(false);
-const banner = ref<Banner>({ message: '', duration: 0 });
+const banner = ref<UiBanner>({ message: '', duration: 0 });
 const submitted = ref(false);
 const loading = ref(false);
 
 const fetchBanners = async () => {
   loading.value = true;
   try {
-    banners.value = await bannerService.getBanners();
+    const b = await bannerService.getBanner();
+    if (b) {
+      const from = (b as any).displayFrom ? new Date((b as any).displayFrom).getTime() : Date.now();
+      const to = (b as any).displayTo ? new Date((b as any).displayTo).getTime() : null;
+      const duration = to ? Math.round((to - from) / 60000) : 0;
+      banners.value = [{ ...b, duration }];
+    } else {
+      banners.value = [];
+    }
   } catch (error) {
     toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to fetch banners', life: 3000 });
   } finally {
@@ -119,15 +128,17 @@ const hideDialog = () => {
 
 const saveBanner = async () => {
   submitted.value = true;
-  if (banner.value.message.trim() && banner.value.duration > 0) {
+  if (banner.value.message.trim() && (banner.value.duration || 0) > 0) {
     try {
-      if (banner.value.bannerId) {
-        await bannerService.updateBanner(banner.value.bannerId, banner.value);
-        toast.add({ severity: 'success', summary: 'Successful', detail: 'Banner Updated', life: 3000 });
-      } else {
-        await bannerService.createBanner(banner.value);
-        toast.add({ severity: 'success', summary: 'Successful', detail: 'Banner Created', life: 3000 });
-      }
+      // Map duration minutes into displayFrom/displayTo for backend
+      const now = new Date();
+      const payload: ApiBanner = {
+        message: banner.value.message,
+        displayFrom: now.toISOString(),
+        displayTo: banner.value.duration ? new Date(now.getTime() + (banner.value.duration || 0) * 60000).toISOString() : undefined,
+      } as any;
+      await bannerService.upsertBanner(payload);
+      toast.add({ severity: 'success', summary: 'Successful', detail: 'Banner Saved', life: 3000 });
       bannerDialog.value = false;
       fetchBanners();
     } catch (error: any) {
@@ -136,12 +147,16 @@ const saveBanner = async () => {
   }
 };
 
-const editBanner = (editBannerData: Banner) => {
-  banner.value = { ...editBannerData };
+const editBanner = (editBannerData: UiBanner) => {
+  // Recompute duration if timestamps exist
+  const displayFrom = (editBannerData as any).displayFrom ? new Date((editBannerData as any).displayFrom).getTime() : Date.now();
+  const displayTo = (editBannerData as any).displayTo ? new Date((editBannerData as any).displayTo).getTime() : null;
+  const duration = displayTo ? Math.round((displayTo - displayFrom) / 60000) : 0;
+  banner.value = { ...editBannerData, duration };
   bannerDialog.value = true;
 };
 
-const confirmDeleteBanner = (bannerToDelete: Banner) => {
+const confirmDeleteBanner = () => {
   confirm.require({
     message: 'Are you sure you want to delete this banner?',
     header: 'Confirm Deletion',
@@ -149,7 +164,7 @@ const confirmDeleteBanner = (bannerToDelete: Banner) => {
     acceptClass: 'p-button-danger',
     accept: async () => {
       try {
-        await bannerService.deleteBanner(bannerToDelete.bannerId!);
+  await bannerService.deleteBanner();
         toast.add({ severity: 'success', summary: 'Successful', detail: 'Banner Deleted', life: 3000 });
         fetchBanners();
       } catch (error: any) {

@@ -1,0 +1,142 @@
+openapi: 3.1.0
+info:
+  title: Admin Backend API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3001
+paths:
+  /api/admin/health:
+    get:
+      summary: Health check
+      responses:
+        '200': { description: OK }
+  /api/admin/users:
+    get:
+      summary: List users
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+                name: { type: string }
+                username: { type: string }
+                emailVerified: { type: boolean }
+              required: [email]
+      responses: { '201': { description: Created } }
+  /api/admin/users/{id}:
+    delete:
+      summary: Delete user
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses: { '200': { description: Deleted } }
+  /api/admin/users/{id}/ban:
+    post:
+      summary: Ban user
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                durationMinutes: { type: integer, default: 60 }
+      responses: { '200': { description: Banned } }
+  /api/admin/users/{id}/unban:
+    post:
+      summary: Unban user
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses: { '200': { description: Unbanned } }
+  /api/admin/users/{id}/reset-password:
+    post:
+      summary: Reset password
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newPassword: { type: string, minLength: 8 }
+              required: [newPassword]
+      responses: { '200': { description: Reset } }
+  /api/admin/users/reset-terms:
+    post:
+      summary: Reset terms for all users
+      responses: { '200': { description: Done } }
+  /api/admin/balances:
+    get:
+      summary: List balances
+      responses: { '200': { description: OK } }
+  /api/admin/balances/{id}/add:
+    post:
+      summary: Add balance delta
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount: { type: number }
+              required: [amount]
+      responses: { '200': { description: Added } }
+  /api/admin/balances/{id}/set:
+    post:
+      summary: Set absolute balance
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount: { type: number, minimum: 0 }
+              required: [amount]
+      responses: { '200': { description: Set } }
+  /api/admin/user-stats:
+    get:
+      summary: User stats placeholder
+      responses: { '200': { description: OK } }
+  /api/admin/banner:
+    post:
+      summary: Upsert banner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message: { type: string }
+                displayFrom: { type: string, format: date-time }
+                displayTo: { type: string, format: date-time }
+                isPublic: { type: boolean }
+              required: [message]
+      responses: { '200': { description: Updated }, '201': { description: Created } }
+    delete:
+      summary: Delete banner
+      responses: { '200': { description: Deleted } }
+  /api/admin/invite:
+    post:
+      summary: Create or reuse invite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                role: { type: string, default: user }
+              required: [email]
+      responses: { '201': { description: Created }, '200': { description: Reused } }
+components: {}

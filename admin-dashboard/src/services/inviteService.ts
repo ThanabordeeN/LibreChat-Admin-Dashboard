@@ -6,8 +6,8 @@ export interface Invite {
 }
 
 export const inviteService = {
-  // Send an invite to a user
-  async sendInvite(inviteData: Invite): Promise<void> {
-    await api.post('/invite', inviteData);
+  async sendInvite(inviteData: Invite): Promise<{ inviteLink: string }> {
+    const res = await api.post('/admin/invite', inviteData);
+    return { inviteLink: res.data.inviteLink };
   },
 };

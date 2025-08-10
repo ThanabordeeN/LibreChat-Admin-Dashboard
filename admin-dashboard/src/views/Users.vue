@@ -177,7 +177,6 @@ const toggleBanUser = async (userToToggle: any) => {
         icon: 'pi pi-unlock',
         accept: async () => {
             try {
-                await bannerService.deleteBanner(userToToggle.id);
                 await unbanUser(userToToggle);
                 toast.add({ severity: 'success', summary: 'Unbanned', detail: 'User has been unbanned.', life: 3000 });
                 fetchUsers();
@@ -203,14 +202,14 @@ const confirmBanUser = async () => {
   const userToBan = banningUser.value;
 
   const banner: Banner = {
-    bannerId: userToBan.id,
     message: banMessage.value,
-    duration: banEndDate.value && banStartDate.value ? Math.floor((banEndDate.value.getTime() - banStartDate.value.getTime()) / 60000) : 0,
+    displayFrom: banStartDate.value ? banStartDate.value.toISOString() : undefined,
+    displayTo: banEndDate.value ? banEndDate.value.toISOString() : undefined,
   };
 
   try {
-    await bannerService.createBanner(banner);
-    await banUser(userToBan);
+  await bannerService.upsertBanner(banner);
+  await banUser(userToBan);
     toast.add({ severity: 'success', summary: 'Banned', detail: 'User has been banned successfully.', life: 3000 });
     
     // Cleanup and refresh

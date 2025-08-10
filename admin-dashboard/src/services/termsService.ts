@@ -1,7 +1,7 @@
-import axios from 'axios';
+import api from './api';
 
-const API_URL = '/reset-terms';
+const API_URL = '/admin/users/reset-terms';
 
-export const resetTerms = async (email: string): Promise<void> => {
-  await axios.post(API_URL, { email });
+export const resetTerms = async (): Promise<void> => {
+  await api.post(API_URL, {});
 };

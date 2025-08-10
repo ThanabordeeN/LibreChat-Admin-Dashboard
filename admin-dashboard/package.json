@@ -29,4 +29,8 @@
     "vite": "^7.0.6",
     "vue-tsc": "^2.0.6"
   }
+  ,"_envSample": {
+    "VITE_ADMIN_API_BASE": "http://localhost:3001/api",
+    "VITE_ADMIN_API_KEY": "your-admin-api-key"
+  }
 }
