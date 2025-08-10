@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom input padding */
+.p-inputtext,
+input[type="text"],
+input[type="password"],
+textarea,
+select {
+	@apply px-4 py-2; /* Horizontal 1rem, vertical 0.5rem */
+}

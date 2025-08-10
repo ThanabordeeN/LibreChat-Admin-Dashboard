@@ -10,34 +10,42 @@
         <label for="duration">Duration (minutes)</label>
         <InputNumber id="duration" v-model="form.duration" />
       </div>
-      <Button label="Ban" class="p-button-danger mt-3" @click="submit" />
+      <UiButton variant="destructive" class="mt-3" :disabled="submitting" @click="submit">
+        <template v-if="submitting">
+          <span class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+          Banning...
+        </template>
+        <template v-else>
+          Ban
+        </template>
+      </UiButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
-import Button from 'primevue/button';
+import UiButton from '../components/ui/button.vue';
 // Replaced deprecated adminService with userService
 // userService not used here after deprecation of direct email ban endpoint
 
 const toast = useToast();
 const form = reactive({ email: '', duration: 60 });
+const submitting = ref(false);
 
 const submit = async () => {
+  if (submitting.value) return;
+  submitting.value = true;
   try {
-  // userService expects an id for ban; simple email-based ban flow removed. This view could lookup user by email first.
-  // TODO: Implement email->id lookup; currently placeholder no-op or error.
-  // For now, show toast error to encourage using Users table ban action.
-  throw new Error('Use Users page to ban/unban users (email-based ban form deprecated).');
-    toast.add({ severity: 'success', summary: 'Success', detail: 'User banned', life: 3000 });
-    form.email = '';
-    form.duration = 60;
+    // Still directing users to main Users page for ban action until email->id lookup implemented
+    throw new Error('Use Users page to ban/unban users (email-based ban form deprecated).');
   } catch (err: any) {
-    toast.add({ severity: 'error', summary: 'Error', detail: err.response?.data?.message || 'Failed to ban user', life: 3000 });
+    toast.add({ severity: 'error', summary: 'Error', detail: err.message || err.response?.data?.message || 'Failed to ban user', life: 3000 });
+  } finally {
+    submitting.value = false;
   }
 };
 </script>

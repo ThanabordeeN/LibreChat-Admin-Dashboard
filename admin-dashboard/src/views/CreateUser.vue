@@ -22,32 +22,45 @@
         <Checkbox inputId="emailVerified" v-model="form.emailVerified" binary />
         <label for="emailVerified">Email Verified</label>
       </div>
-      <Button label="Create" class="p-button-primary mt-3" @click="submit" />
+      <UiButton :disabled="submitting" class="mt-3" @click="submit">
+        <template v-if="submitting">
+          <span class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+          Creating...
+        </template>
+        <template v-else>
+          Create
+        </template>
+      </UiButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import Checkbox from 'primevue/checkbox';
-import Button from 'primevue/button';
-// Replaced deprecated adminService with userService
+// Use unified UiButton component instead of PrimeVue Button for consistency
+import UiButton from '../components/ui/button.vue';
 import { userService } from '../services/userService';
 
 const toast = useToast();
 const form = reactive({ email: '', name: '', username: '', password: '', emailVerified: true });
+const submitting = ref(false);
 
 const submit = async () => {
+  if (submitting.value) return;
+  submitting.value = true;
   try {
-  await userService.createUser(form as any);
+    await userService.createUser(form as any);
     toast.add({ severity: 'success', summary: 'Success', detail: 'User created', life: 3000 });
     form.email = form.name = form.username = form.password = '';
     form.emailVerified = true;
   } catch (err: any) {
     toast.add({ severity: 'error', summary: 'Error', detail: err.response?.data?.message || 'Failed to create user', life: 3000 });
+  } finally {
+    submitting.value = false;
   }
 };
 </script>

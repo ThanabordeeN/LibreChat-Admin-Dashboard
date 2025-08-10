@@ -18,25 +18,36 @@
         <Checkbox inputId="isPublic" v-model="form.isPublic" binary />
         <label for="isPublic">Public</label>
       </div>
-      <Button label="Update" class="p-button-primary mt-3" @click="submit" />
+      <UiButton class="mt-3" :disabled="submitting" @click="submit">
+        <template v-if="submitting">
+          <span class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+          Updating...
+        </template>
+        <template v-else>
+          Update
+        </template>
+      </UiButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import Checkbox from 'primevue/checkbox';
-import Button from 'primevue/button';
+import UiButton from '../components/ui/button.vue';
 // Replaced deprecated adminService with bannerService
 import { bannerService } from '../services/bannerService';
 
 const toast = useToast();
 const form = reactive({ displayFrom: '', displayTo: '', message: '', isPublic: false });
+const submitting = ref(false);
 
 const submit = async () => {
+  if (submitting.value) return;
+  submitting.value = true;
   try {
     await bannerService.upsertBanner({
       displayFrom: form.displayFrom || undefined,
@@ -49,6 +60,8 @@ const submit = async () => {
     form.isPublic = false;
   } catch (err: any) {
     toast.add({ severity: 'error', summary: 'Error', detail: err.response?.data?.message || 'Failed to update banner', life: 3000 });
+  } finally {
+    submitting.value = false;
   }
 };
 </script>
@@ -57,8 +70,5 @@ const submit = async () => {
 .card {
   max-width: 500px;
 }
-.p-button-primary {
-  background: #4f46e5;
-  border: 1px solid #4f46e5;
-}
+/* Legacy PrimeVue button style removed (now using UiButton) */
 </style>
