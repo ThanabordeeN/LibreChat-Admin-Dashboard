@@ -1,0 +1,34 @@
+services:
+  # --- Admin Backend (custom) ---
+  admin-backend:
+    container_name: librechat-admin-backend
+    build:
+      context: ./admin-backend
+    env_file:
+      - .env
+    environment:
+      # Override / enforce internal-only values
+      ADMIN_BACKEND_PORT: 3001
+      MONGO_URI: mongodb://mongodb:27017/LibreChat
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  # --- Admin Dashboard (Vite build -> static) ---
+  admin-dashboard:
+    container_name: librechat-admin-dashboard
+    build:
+      context: ./admin-dashboard
+    env_file:
+      - .env
+    environment:
+      # Override base to docker network host if root .env has localhost
+      VITE_ADMIN_API_BASE: http://admin-backend:3001/api
+    ports:
+      - "3000:8080"
+    depends_on:
+      - admin-backend
+    restart: unless-stopped
+
